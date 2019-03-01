@@ -171,7 +171,7 @@ def contour_det(in_path,o_path, choise):
         face = crop_face(img, 0.85, 0.3)
         cv2.imwrite(str(o_path) + "num.jpg", num)
         cv2.imwrite(str(o_path) + "face.jpg", face)
-        return new_img, num
+        return img, num
     elif choise == 1: #Вырезать 2 страницы паспорта
         img,(rh,rw) = resize_image(new_img)
         first_page = crop_first_page(img, 0.85, 0.3)
