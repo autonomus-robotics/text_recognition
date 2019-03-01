@@ -89,6 +89,14 @@ def crop_num(img, scale_x=1.0, scale_y=1.0):
     img_cropped = img[int(top_y):int(bottom_y), int(left_x):int(right_x)]
     return img_cropped
 
+def crop_face(img, scale_x=1.0, scale_y=1.0):
+    center_x, center_y = img.shape[1]/2, img.shape[0]/2
+    width_scaled, height_scaled = img.shape[1]*scale_x, img.shape[0]*scale_y
+    left_x, right_x = center_x - width_scaled/2 , center_x - height_scaled*0.4
+    top_y, bottom_y = center_y + width_scaled*0.15 , center_y + height_scaled
+    img_cropped = img[int(top_y):int(bottom_y), int(left_x):int(right_x)]
+    return img_cropped
+
 
 def contour_det(in_path,o_path, choise):
     img = cv2.imread(in_path, 1)
@@ -157,9 +165,12 @@ def contour_det(in_path,o_path, choise):
     #Выбор метода сегментации изображения
     if choise == 0: #Вырезать с исходного изображения паспорт целиком
         #cv2.imwrite(os.path.join(o_path, str(c) + '.jpg'), new_img)
-        num = crop_num(new_img, 0.85, 0.3)
+        img,(rh,rw) = resize_image(new_img)
+        num = crop_num(img, 0.85, 0.3)
         num = imutils.rotate_bound(num, -90)
+        face = crop_face(img, 0.85, 0.3)
         cv2.imwrite(str(o_path) + "num.jpg", num)
+        cv2.imwrite(str(o_path) + "face.jpg", face)
         return new_img, num
     elif choise == 1: #Вырезать 2 страницы паспорта
         img,(rh,rw) = resize_image(new_img)
@@ -167,9 +178,11 @@ def contour_det(in_path,o_path, choise):
         second_page = crop_second_page(img, 0.85, 0.3)
         num = crop_num(img, 0.85, 0.3)
         num = imutils.rotate_bound(num, -90)
+        face = crop_face(new_img, 0.85, 0.3)
         cv2.imwrite(str(o_path) + "num.jpg", num)
         cv2.imwrite(str(o_path) + "1.jpg", first_page)
         cv2.imwrite(str(o_path) + "2.jpg", second_page)
+        cv2.imwrite(str(o_path) + "face.jpg", face)
         return first_page, second_page, num
     else:
         print("OOPSS")
