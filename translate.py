@@ -19,8 +19,9 @@ import dlib
 import imutils
 
 
-input_path = r'/home/paul/Desktop/Passport_detect/2.jpg'
-output_path = r'/home/paul/Desktop/Passport_detect/text-detection-ctpn/data/res/'
+input_path = r'/home/paul/Desktop/Passport_detect/images/6.jpg'
+#input_path = r'/home/paul/Desktop/Passport_detect/text-detection-ctpn/data/p_9.jpg'
+output_path = r'/home/paul/Desktop/Passport_detect/result'
 
 def resize_image(img):
     img_size = img.shape
@@ -63,6 +64,7 @@ def get_text(in_path):
     print('Find {} images'.format(len(files)))
     return files
 
+
 def crop_first_page(img, scale_x=1.0, scale_y = 1.0):
     center_x, center_y = img.shape[1] / 2, img.shape[0] / 2
     width_scaled, height_scaled = img.shape[1] * scale_x, img.shape[0] * scale_y
@@ -78,6 +80,15 @@ def crop_second_page(img, scale_x=1.0, scale_y = 1.0):
     top_y, bottom_y = center_y, center_y + height_scaled*1.2
     img_cropped = img[int(top_y):int(bottom_y), int(left_x):int(right_x)]
     return img_cropped
+
+def crop_num(img, scale_x=1.0, scale_y=1.0):
+    center_x, center_y = img.shape[1]/2, img.shape[0]/2
+    width_scaled, height_scaled = img.shape[1]*scale_x, img.shape[0]*scale_y
+    left_x, right_x = center_x+width_scaled/2.1 , center_x+width_scaled
+    top_y, bottom_y = center_y - width_scaled/1.5, center_y
+    img_cropped = img[int(top_y):int(bottom_y), int(left_x):int(right_x)]
+    return img_cropped
+
 
 def contour_det(in_path,o_path, choise):
     img = cv2.imread(in_path, 1)
@@ -146,16 +157,23 @@ def contour_det(in_path,o_path, choise):
     #Выбор метода сегментации изображения
     if choise == 0: #Вырезать с исходного изображения паспорт целиком
         #cv2.imwrite(os.path.join(o_path, str(c) + '.jpg'), new_img)
-        return new_img
+        num = crop_num(new_img, 0.85, 0.3)
+        num = imutils.rotate_bound(num, -90)
+        cv2.imwrite(str(o_path) + "num.jpg", num)
+        return new_img, num
     elif choise == 1: #Вырезать 2 страницы паспорта
         img,(rh,rw) = resize_image(new_img)
         first_page = crop_first_page(img, 0.85, 0.3)
         second_page = crop_second_page(img, 0.85, 0.3)
+        num = crop_num(img, 0.85, 0.3)
+        num = imutils.rotate_bound(num, -90)
+        cv2.imwrite(str(o_path) + "num.jpg", num)
         cv2.imwrite(str(o_path) + "1.jpg", first_page)
         cv2.imwrite(str(o_path) + "2.jpg", second_page)
-        return first_page, second_page
+        return first_page, second_page, num
     else:
         print("OOPSS")
+
 
 def text_recogn(image, o_path):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -183,8 +201,10 @@ def text_recogn(image, o_path):
                     txt.write(word+' ')
             txt.write('\n')
     txt.close
+    #os.path.join(o_path, os.system("rm text_recog.txt"))
 
 def text_recogn_f_page(f_page, o_path):
+
     gray = cv2.cvtColor(f_page, cv2.COLOR_BGR2GRAY)
 
     noisy_image = img_as_ubyte(gray)
@@ -210,6 +230,7 @@ def text_recogn_f_page(f_page, o_path):
                     txt.write(word+' ')
             txt.write('\n')
     txt.close
+    #os.path.join(o_path, os.system("rm text_recog_1.txt"))
 
 def text_recogn_sec_page(sec_page, o_path):
     gray = cv2.cvtColor(sec_page, cv2.COLOR_BGR2GRAY)
@@ -237,6 +258,20 @@ def text_recogn_sec_page(sec_page, o_path):
                     txt.write(word+' ')
             txt.write('\n')
     txt.close
+    #os.path.join(o_path, os.system("rm text_recog_2.txt"))
+
+def num_recogn_page(num_page, o_path):
+    gray = cv2.cvtColor(num_page, cv2.COLOR_BGR2GRAY)
+
+    noisy_image = img_as_ubyte(gray)
+
+    bilat = mean_bilateral(noisy_image.astype(np.uint16), disk(30), s0=20, s1=5)
+
+    txt = open(os.path.join(o_path, "num_recog.txt"), "w")
+    text = image_to_string(bilat, lang='rus')
+    text = corrector.FixFragment(re.sub(r'\?|\!|\/|\;|\:|\=|\_|\(|\[|\)|\]|\#|\,|\%', '', text))
+    txt.write(text)
+    txt.close
 
 
 corrector = jamspell.TSpellCorrector()
@@ -248,33 +283,13 @@ corrector.LoadLangModel('ru_small.bin')
 
 choise = int(input("0 or 1: "))
 if choise == 1:
-    first_p, sec_p = contour_det(input_path, output_path, choise)
-    red_f_p = text_recogn_f_page(first_p, output_path)
-    red_sec_p = text_recogn_sec_page(sec_p, output_path)
+    first_p, sec_p, num = contour_det(input_path, output_path, choise)
+    text_recogn_f_page(first_p, output_path)
+    text_recogn_sec_page(sec_p, output_path)
+    num_recogn_page(num, output_path)
 elif choise == 0:
-    new_img = contour_det(input_path, output_path, choise)
+    new_img, num = contour_det(input_path, output_path, choise)
     text_recogn(new_img, output_path)
+    num_recogn_page(num, output_path)
 
 ####################################################
-# Вариант выделения требуемого изображения из исходного
-# Вырезается каждая страница отдельно
-
-# im_name_list = get_images(input_path)
-# count = 1
-#
-# for i in im_name_list:
-#     im = cv2.imread(i)
-#     img,(rh,rw) = resize_image(im)
-#     first_page = crop_first_page(img, 0.85, 0.3)
-#     second_page = crop_second_page(img, 0.85, 0.3)
-#
-#     cv2.imwrite(os.path.join(output_path, str(count)+"_1.jpg"), first_page)
-#     cv2.imwrite(os.path.join(output_path, str(count)+"_2.jpg"), second_page)
-#     count+=1
-
-####################################################
-
-#im_name_list = get_images(input_path)
-
-#for name in im_name_list: #Предобработка изобрражение и распознавание текста
-#img = cv2.imread(new_img, 1)
