@@ -19,7 +19,7 @@ import dlib
 import imutils
 
 
-input_path = r'/home/paul/Desktop/Passport_detect/images/6.jpg'
+input_path = r'/home/paul/Desktop/Passport_detect/images/9.jpg'
 #input_path = r'/home/paul/Desktop/Passport_detect/text-detection-ctpn/data/p_9.jpg'
 output_path = r'/home/paul/Desktop/Passport_detect/result'
 
@@ -110,8 +110,8 @@ def contour_det(in_path,o_path, choise):
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
     closed = cv2.morphologyEx(can, cv2.MORPH_CLOSE, kernel)
 
-    _, contours0, hierarchy = cv2.findContours(can, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
+    _, contours0, hierarchy = cv2.findContours(closed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    img_1 = img.copy()
     a_max = 0
     c = 0
     for cnt in contours0: #Определение всех контуров
@@ -119,7 +119,7 @@ def contour_det(in_path,o_path, choise):
         c+=1
         if perimeter>a_max:
             x,y,w,h = cv2.boundingRect(cnt)
-            #cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
+            img_1 = cv2.rectangle(img_1,(x,y),(x+w,y+h),(0,255,0),2)
             a_max = perimeter
             rect = cv2.minAreaRect(cnt)
             box= cv2.boxPoints(rect)
@@ -139,7 +139,7 @@ def contour_det(in_path,o_path, choise):
 
     # вычисляем угол между самой длинной стороной прямоугольника и горизонтом
     angle = 180.0/math.pi * math.acos((reference[0]*usedEdge[0] + reference[1]*usedEdge[1]) / (cv2.norm(reference) *cv2.norm(usedEdge)))
-
+    cv2.imwrite(os.path.join(o_path, 'contours.jpg'), img_1)
     if area >500:
         cv2.drawContours(img,[box],0,(255,0,0),2) # рисуем прямоугольник
 
@@ -153,8 +153,8 @@ def contour_det(in_path,o_path, choise):
 
     #Промежуточное изображение для определения лица на паспорте (подумать над избмежанием такого решения)
     cv2.imwrite(os.path.join(o_path, '123.png'), new_img)
-    img_1 = dlib.load_rgb_image(os.path.join(o_path, "123.png"))
-    dets = detector(img_1, 1)
+    img_2 = dlib.load_rgb_image(os.path.join(o_path, "123.png"))
+    dets = detector(img_2, 1)
     #os.path.join(o_path, os.system("rm 123.png"))
     #Проверка на детекцию лица: если количество лиц = 0 то переворачиваем на 180
     if len(dets)==0:
@@ -162,6 +162,7 @@ def contour_det(in_path,o_path, choise):
     else:
         print("more than 0 faces")
 
+    cv2.imwrite(os.path.join(o_path, 'final.png'), new_img)
     #Выбор метода сегментации изображения
     if choise == 0: #Вырезать с исходного изображения паспорт целиком
         #cv2.imwrite(os.path.join(o_path, str(c) + '.jpg'), new_img)
@@ -169,8 +170,8 @@ def contour_det(in_path,o_path, choise):
         num = crop_num(img, 0.85, 0.3)
         num = imutils.rotate_bound(num, -90)
         face = crop_face(img, 0.85, 0.3)
-        cv2.imwrite(str(o_path) + "num.jpg", num)
-        cv2.imwrite(str(o_path) + "face.jpg", face)
+        cv2.imwrite(os.path.join(o_path, 'num.jpg'), num)
+        cv2.imwrite(os.path.join(o_path, 'face.jpg'), face)
         return img, num
     elif choise == 1: #Вырезать 2 страницы паспорта
         img,(rh,rw) = resize_image(new_img)
@@ -179,10 +180,10 @@ def contour_det(in_path,o_path, choise):
         num = crop_num(img, 0.85, 0.3)
         num = imutils.rotate_bound(num, -90)
         face = crop_face(new_img, 0.85, 0.3)
-        cv2.imwrite(str(o_path) + "num.jpg", num)
-        cv2.imwrite(str(o_path) + "1.jpg", first_page)
-        cv2.imwrite(str(o_path) + "2.jpg", second_page)
-        cv2.imwrite(str(o_path) + "face.jpg", face)
+        cv2.imwrite(os.path.join(o_path, 'num.jpg'), num)
+        cv2.imwrite(os.path.join(o_path, '1.jpg'), first_page)
+        cv2.imwrite(os.path.join(o_path, '2.jpg'), second_page)
+        cv2.imwrite(os.path.join(o_path, 'face.jpg'), face)
         return first_page, second_page, num
     else:
         print("OOPSS")
@@ -294,7 +295,7 @@ corrector.LoadLangModel('ru_small.bin')
 #Операция выделения требуемого изображения из исходного
 #Здесь был код из contour_det()
 
-choise = int(input("0 or 1: "))
+choise = int(input("0 - full passport \t 1- cropped passport \t Choose the number:  "))
 if choise == 1:
     first_p, sec_p, num = contour_det(input_path, output_path, choise)
     text_recogn_f_page(first_p, output_path)
