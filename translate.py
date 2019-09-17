@@ -1,9 +1,5 @@
 import cv2
 from pytesseract import image_to_string
-import dateutil.parser as dparser
-import datefinder
-import matplotlib.pyplot as plt
-from PIL import Image
 import numpy as np
 import os
 import jamspell
@@ -11,13 +7,8 @@ import re
 from skimage import img_as_ubyte
 from skimage.filters.rank import mean_bilateral
 from skimage.morphology import disk
-import math
-import dlib
 import imutils
 import gui as gui
-
-# import parse_txt as par
-# from parse_txt import mas_1, mas_2
 
 # input_path = r'/home/paul/Desktop/Work_projects/images/1_page.jpg'
 input_path = r'/home/paul/Desktop/Work_projects/images/img.png'
@@ -25,10 +16,6 @@ output_path = r'/home/paul/Desktop/Work_projects/result'
 
 sex = ['МУЖ', 'ЖЕН']
 exc_words = ['ПО', 'В', 'НА']
-
-
-# sex = par.sex
-# exc_words = par.exc_words
 
 
 def ReadFromFile(input):
